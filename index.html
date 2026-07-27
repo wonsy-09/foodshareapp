@@ -1,0 +1,224 @@
+import React, { useState, useEffect } from 'react';
+import { Header } from './components/Header';
+import { FridgeView } from './components/FridgeView';
+import { SharingBoardView } from './components/SharingBoardView';
+import { ReportView } from './components/ReportView';
+import { AiScannerModal } from './components/AiScannerModal';
+import { IngredientFormModal } from './components/IngredientFormModal';
+import { CreatePostModal } from './components/CreatePostModal';
+import { PostDetailModal } from './components/PostDetailModal';
+import { Ingredient, SharingPost, SharingRecord, UserProfile } from './types';
+import {
+  INITIAL_USER,
+  INITIAL_INGREDIENTS,
+  INITIAL_SHARING_POSTS,
+  INITIAL_SHARING_RECORDS,
+} from './data/mockData';
+
+export default function App() {
+  const [activeTab, setActiveTab] = useState<'fridge' | 'sharing' | 'report'>('fridge');
+
+  // State with LocalStorage persistence
+  const [user, setUser] = useState<UserProfile>(() => {
+    const saved = localStorage.getItem('soso_user');
+    return saved ? JSON.parse(saved) : INITIAL_USER;
+  });
+
+  const [ingredients, setIngredients] = useState<Ingredient[]>(() => {
+    const saved = localStorage.getItem('soso_ingredients');
+    return saved ? JSON.parse(saved) : INITIAL_INGREDIENTS;
+  });
+
+  const [posts, setPosts] = useState<SharingPost[]>(() => {
+    const saved = localStorage.getItem('soso_posts');
+    return saved ? JSON.parse(saved) : INITIAL_SHARING_POSTS;
+  });
+
+  const [records, setRecords] = useState<SharingRecord[]>(() => {
+    const saved = localStorage.getItem('soso_records');
+    return saved ? JSON.parse(saved) : INITIAL_SHARING_RECORDS;
+  });
+
+  // Modal Visibility States
+  const [isAiScannerOpen, setIsAiScannerOpen] = useState(false);
+  const [isManualFormOpen, setIsManualFormOpen] = useState(false);
+  const [isCreatePostOpen, setIsCreatePostOpen] = useState(false);
+  const [selectedPost, setSelectedPost] = useState<SharingPost | null>(null);
+  const [prefilledIngredient, setPrefilledIngredient] = useState<Ingredient | null>(null);
+
+  // Sync to local storage
+  useEffect(() => {
+    localStorage.setItem('soso_user', JSON.stringify(user));
+  }, [user]);
+
+  useEffect(() => {
+    localStorage.setItem('soso_ingredients', JSON.stringify(ingredients));
+  }, [ingredients]);
+
+  useEffect(() => {
+    localStorage.setItem('soso_posts', JSON.stringify(posts));
+  }, [posts]);
+
+  useEffect(() => {
+    localStorage.setItem('soso_records', JSON.stringify(records));
+  }, [records]);
+
+  // Handlers
+  const handleSetUserLocation = (newLoc: string) => {
+    setUser((prev) => ({ ...prev, location: newLoc }));
+  };
+
+  const handleAddIngredientsBatch = (newItems: Omit<Ingredient, 'id'>[]) => {
+    const created: Ingredient[] = newItems.map((item, index) => ({
+      ...item,
+      id: `ing_${Date.now()}_${index}`,
+    }));
+    setIngredients((prev) => [...created, ...prev]);
+  };
+
+  const handleAddSingleIngredient = (item: Omit<Ingredient, 'id'>) => {
+    const created: Ingredient = {
+      ...item,
+      id: `ing_${Date.now()}`,
+    };
+    setIngredients((prev) => [created, ...prev]);
+  };
+
+  const handleDeleteIngredient = (id: string) => {
+    setIngredients((prev) => prev.filter((i) => i.id !== id));
+  };
+
+  const handleOpenCreatePostWithItem = (item: Ingredient) => {
+    setPrefilledIngredient(item);
+    setIsCreatePostOpen(true);
+  };
+
+  const handleAddPost = (
+    postData: Omit<SharingPost, 'id' | 'createdAt' | 'author' | 'likes'>
+  ) => {
+    const newPost: SharingPost = {
+      ...postData,
+      id: `post_${Date.now()}`,
+      createdAt: '방금 전',
+      author: {
+        id: user.id,
+        name: user.name,
+        avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80',
+        area: user.location.split(' ')[1] || '내 동네',
+      },
+      likes: 0,
+    };
+
+    setPosts((prev) => [newPost, ...prev]);
+    setActiveTab('sharing');
+  };
+
+  const handleCompleteShare = (newRecord: SharingRecord) => {
+    setRecords((prev) => [newRecord, ...prev]);
+
+    // Update user impact stats
+    setUser((prev) => ({
+      ...prev,
+      totalSavedMoney: prev.totalSavedMoney + newRecord.savedMoney,
+      totalWastePreventedKg: prev.totalWastePreventedKg + newRecord.wastePreventedKg,
+      totalCo2PreventedKg: prev.totalCo2PreventedKg + newRecord.co2PreventedKg,
+      completedShareCount: prev.completedShareCount + 1,
+    }));
+  };
+
+  // Calculate Urgent count
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const urgentCount = ingredients.filter((item) => {
+    const expDate = new Date(item.expiryDate);
+    expDate.setHours(0, 0, 0, 0);
+    const diffDays = Math.ceil(
+      (expDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)
+    );
+    return diffDays <= 2;
+  }).length;
+
+  return (
+    <div className="min-h-screen bg-slate-50 text-slate-900 font-sans flex flex-col antialiased">
+      {/* App Main Header */}
+      <Header
+        activeTab={activeTab}
+        setActiveTab={setActiveTab}
+        user={user}
+        setUserLocation={handleSetUserLocation}
+        urgentCount={urgentCount}
+      />
+
+      {/* Main Body */}
+      <main className="flex-1 max-w-6xl w-full mx-auto px-4 sm:px-6 py-6 space-y-6">
+        {activeTab === 'fridge' && (
+          <FridgeView
+            ingredients={ingredients}
+            posts={posts}
+            onOpenAiScanner={() => setIsAiScannerOpen(true)}
+            onOpenManualForm={() => setIsManualFormOpen(true)}
+            onDeleteIngredient={handleDeleteIngredient}
+            onOpenCreatePostWithItem={handleOpenCreatePostWithItem}
+            onSelectPost={(p) => setSelectedPost(p)}
+          />
+        )}
+
+        {activeTab === 'sharing' && (
+          <SharingBoardView
+            posts={posts}
+            userLocation={user.location}
+            onOpenCreatePost={() => {
+              setPrefilledIngredient(null);
+              setIsCreatePostOpen(true);
+            }}
+            onSelectPost={(p) => setSelectedPost(p)}
+          />
+        )}
+
+        {activeTab === 'report' && (
+          <ReportView user={user} records={records} />
+        )}
+      </main>
+
+      {/* Footer */}
+      <footer className="bg-white border-t border-slate-200 py-6 mt-12 text-center text-xs text-slate-500">
+        <div className="max-w-6xl mx-auto px-4 space-y-1">
+          <p className="font-medium text-slate-700">
+            소소식탁 — 1인 가구 및 소가구를 위한 AI 식재료 나눔 & 소비기한 관리 서비스
+          </p>
+          <p className="text-slate-400">
+            불필요한 식비 지출을 줄이고, 지역 이웃과 자원 순환을 실천합니다. 🌿
+          </p>
+        </div>
+      </footer>
+
+      {/* Modals */}
+      <AiScannerModal
+        isOpen={isAiScannerOpen}
+        onClose={() => setIsAiScannerOpen(false)}
+        onAddIngredients={handleAddIngredientsBatch}
+      />
+
+      <IngredientFormModal
+        isOpen={isManualFormOpen}
+        onClose={() => setIsManualFormOpen(false)}
+        onAddIngredient={handleAddSingleIngredient}
+      />
+
+      <CreatePostModal
+        isOpen={isCreatePostOpen}
+        onClose={() => setIsCreatePostOpen(false)}
+        userIngredients={ingredients}
+        prefilledIngredient={prefilledIngredient}
+        onAddPost={handleAddPost}
+        userLocation={user.location}
+      />
+
+      <PostDetailModal
+        post={selectedPost}
+        onClose={() => setSelectedPost(null)}
+        onCompleteShare={handleCompleteShare}
+      />
+    </div>
+  );
+}

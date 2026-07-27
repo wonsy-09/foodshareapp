@@ -1,0 +1,249 @@
+import React, { useState } from 'react';
+import { Search, Plus, MapPin, Heart, MessageSquare, Filter, Gift, ArrowRightLeft, Sparkles, Clock, CheckCircle } from 'lucide-react';
+import { CategoryType, SharingPost } from '../types';
+
+interface SharingBoardViewProps {
+  posts: SharingPost[];
+  userLocation: string;
+  onOpenCreatePost: () => void;
+  onSelectPost: (post: SharingPost) => void;
+}
+
+export const SharingBoardView: React.FC<SharingBoardViewProps> = ({
+  posts,
+  userLocation,
+  onOpenCreatePost,
+  onSelectPost,
+}) => {
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedType, setSelectedType] = useState<'all' | 'free' | 'exchange'>('all');
+  const [selectedCategory, setSelectedCategory] = useState<string>('ALL');
+
+  const filteredPosts = posts.filter((post) => {
+    const matchesSearch =
+      post.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      post.ingredientName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      post.description.toLowerCase().includes(searchQuery.toLowerCase());
+
+    const matchesType =
+      selectedType === 'all' || post.type === selectedType;
+
+    const matchesCategory =
+      selectedCategory === 'ALL' || post.category === selectedCategory;
+
+    return matchesSearch && matchesType && matchesCategory;
+  });
+
+  return (
+    <div className="space-y-6">
+      {/* Banner / Header Bar */}
+      <div className="bg-[#5A5A40] text-[#FAF9F6] rounded-3xl p-6 shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-4 border border-[rgba(90,90,64,0.2)]">
+        <div className="space-y-1">
+          <div className="inline-flex items-center gap-1.5 bg-[#E9EED9]/20 backdrop-blur-xs px-3 py-1 rounded-full text-xs font-semibold text-[#E9EED9] border border-[#E9EED9]/30">
+            <MapPin className="w-3.5 h-3.5" />
+            <span>{userLocation} 인근 자취 이웃</span>
+          </div>
+          <h2 className="text-xl sm:text-2xl font-bold font-serif-natural tracking-tight">
+            우리 동네 식재료 나눔 & 물꼬 교환
+          </h2>
+          <p className="text-xs sm:text-sm text-[#E9EED9]/90 max-w-xl">
+            혼자 먹기엔 양이 많거나 유통기한이 다가오는 식재료를 이웃과 따뜻하게 나누어보세요.
+          </p>
+        </div>
+
+        <button
+          onClick={onOpenCreatePost}
+          className="shrink-0 px-5 py-3 bg-[#E9EED9] hover:bg-[#dce3ca] text-[#5A5A40] font-bold text-sm rounded-2xl transition-all shadow-xs flex items-center gap-2 cursor-pointer"
+        >
+          <Plus className="w-4 h-4 text-[#5A5A40]" />
+          <span>나눔/교환 글 작성하기</span>
+        </button>
+      </div>
+
+      {/* Filter and Search Section */}
+      <div className="bg-[#FAF9F6] rounded-3xl p-5 shadow-2xs border border-[rgba(90,90,64,0.12)] space-y-3">
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
+          {/* Type Switcher Tabs */}
+          <div className="flex items-center bg-[#E9EED9]/60 p-1 rounded-2xl w-full sm:w-auto text-xs font-semibold border border-[rgba(90,90,64,0.1)]">
+            <button
+              onClick={() => setSelectedType('all')}
+              className={`flex-1 sm:flex-none px-4 py-2 rounded-xl transition-all ${
+                selectedType === 'all'
+                  ? 'bg-[#5A5A40] text-[#FAF9F6] shadow-2xs'
+                  : 'text-[#5A5A40] hover:text-[#3A3A2E]'
+              }`}
+            >
+              전체글
+            </button>
+            <button
+              onClick={() => setSelectedType('free')}
+              className={`flex-1 sm:flex-none px-4 py-2 rounded-xl transition-all flex items-center justify-center gap-1 ${
+                selectedType === 'free'
+                  ? 'bg-[#5A5A40] text-[#FAF9F6] shadow-2xs'
+                  : 'text-[#5A5A40] hover:text-[#3A3A2E]'
+              }`}
+            >
+              <Gift className="w-3.5 h-3.5" />
+              <span>무료 나눔 🎁</span>
+            </button>
+            <button
+              onClick={() => setSelectedType('exchange')}
+              className={`flex-1 sm:flex-none px-4 py-2 rounded-xl transition-all flex items-center justify-center gap-1 ${
+                selectedType === 'exchange'
+                  ? 'bg-[#5A5A40] text-[#FAF9F6] shadow-2xs'
+                  : 'text-[#5A5A40] hover:text-[#3A3A2E]'
+              }`}
+            >
+              <ArrowRightLeft className="w-3.5 h-3.5" />
+              <span>물꼬 교환 🔄</span>
+            </button>
+          </div>
+
+          {/* Search Input */}
+          <div className="relative w-full sm:w-64">
+            <Search className="w-4 h-4 text-[#8D917A] absolute left-3 top-2.5" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="나눔 재료/동네 검색..."
+              className="w-full pl-9 pr-3 py-1.5 text-xs border border-[rgba(90,90,64,0.15)] bg-white rounded-xl focus:outline-none focus:ring-2 focus:ring-[#5A5A40]/20 text-[#3A3A2E]"
+            />
+          </div>
+        </div>
+
+        {/* Category Filter */}
+        <div className="flex items-center gap-2 overflow-x-auto pb-1 text-xs pt-1 border-t border-[rgba(90,90,64,0.1)] no-scrollbar">
+          <span className="text-[#8D917A] font-medium shrink-0">카테고리:</span>
+          {['ALL', '채소/과일', '정육/계란', '가공식품/양념', '베이커리/간식', '음료/유제품'].map(
+            (cat) => (
+              <button
+                key={cat}
+                onClick={() => setSelectedCategory(cat)}
+                className={`px-3 py-1 rounded-full whitespace-nowrap transition-all text-xs font-semibold ${
+                  selectedCategory === cat
+                    ? 'bg-[#5A5A40] text-[#FAF9F6]'
+                    : 'bg-[#E9EED9]/70 text-[#5A5A40] hover:bg-[#E9EED9]'
+                }`}
+              >
+                {cat === 'ALL' ? '전체' : cat}
+              </button>
+            )
+          )}
+        </div>
+      </div>
+
+      {/* Sharing Posts Grid */}
+      {filteredPosts.length === 0 ? (
+        <div className="bg-[#FAF9F6] rounded-3xl p-12 text-center border border-[rgba(90,90,64,0.12)] space-y-3">
+          <p className="text-sm text-[#8D917A] font-medium">검색된 나눔글이 없습니다.</p>
+          <button
+            onClick={onOpenCreatePost}
+            className="px-4 py-2 bg-[#5A5A40] text-[#FAF9F6] text-xs font-semibold rounded-xl"
+          >
+            첫 번째 나눔글 올리기
+          </button>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {filteredPosts.map((post) => (
+            <div
+              key={post.id}
+              onClick={() => onSelectPost(post)}
+              className="bg-[#FAF9F6] rounded-3xl p-5 border border-[rgba(90,90,64,0.12)] hover:border-[#5A5A40] hover:shadow-md transition-all cursor-pointer flex flex-col justify-between group"
+            >
+              <div>
+                {/* Post Top Meta */}
+                <div className="flex items-center justify-between gap-2 mb-2.5">
+                  <div className="flex items-center gap-2">
+                    {/* Author Avatar & Area */}
+                    <img
+                      src={post.author.avatar}
+                      alt={post.author.name}
+                      className="w-6 h-6 rounded-full object-cover border border-[rgba(90,90,64,0.2)]"
+                    />
+                    <span className="text-xs text-[#3A3A2E] font-bold">
+                      {post.author.name}
+                    </span>
+                    <span className="text-[11px] text-[#8D917A]">· {post.createdAt}</span>
+                  </div>
+
+                  {/* Status Badge */}
+                  <span
+                    className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full ${
+                      post.status === 'available'
+                        ? 'bg-[#E9EED9] text-[#5A5A40] border border-[rgba(90,90,64,0.15)]'
+                        : post.status === 'reserved'
+                        ? 'bg-[#D4A373]/20 text-[#8C572B] border border-[#D4A373]/30'
+                        : 'bg-slate-200 text-slate-600'
+                    }`}
+                  >
+                    {post.status === 'available'
+                      ? '나눔가능'
+                      : post.status === 'reserved'
+                      ? '예약중'
+                      : '나눔완료'}
+                  </span>
+                </div>
+
+                {/* Main Content Layout */}
+                <div className="flex gap-3">
+                  {post.imageUrl && (
+                    <img
+                      src={post.imageUrl}
+                      alt={post.title}
+                      className="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl object-cover shrink-0 bg-[#E9EED9]"
+                    />
+                  )}
+
+                  <div className="flex-1 space-y-1">
+                    <div className="flex items-center gap-1.5">
+                      <span
+                        className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                          post.type === 'free'
+                            ? 'bg-[#E9EED9] text-[#5A5A40]'
+                            : 'bg-[#D4A373]/20 text-[#8C572B]'
+                        }`}
+                      >
+                        {post.type === 'free' ? '무료나눔 🎁' : '물꼬교환 🔄'}
+                      </span>
+                      <span className="text-[11px] text-[#8D917A]">{post.category}</span>
+                    </div>
+
+                    <h3 className="font-bold text-[#3A3A2E] text-sm sm:text-base group-hover:text-[#5A5A40] transition-colors line-clamp-1 font-serif-natural">
+                      {post.title}
+                    </h3>
+
+                    <p className="text-xs text-[#3A3A2E]/80 line-clamp-2 leading-relaxed">
+                      {post.description}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Exchange Note if any */}
+                {post.type === 'exchange' && post.exchangeWant && (
+                  <div className="mt-2.5 p-2 bg-[#E9EED9]/50 border border-[rgba(90,90,64,0.12)] rounded-xl text-xs text-[#5A5A40] font-medium flex items-center gap-1.5">
+                    <ArrowRightLeft className="w-3.5 h-3.5 text-[#5A5A40] shrink-0" />
+                    <span className="truncate">희망 교환품: {post.exchangeWant}</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Bottom Info: Location & Action */}
+              <div className="mt-3 pt-3 border-t border-[rgba(90,90,64,0.1)] flex items-center justify-between text-xs text-[#8D917A]">
+                <span className="flex items-center gap-1 font-medium text-[#5A5A40]">
+                  <MapPin className="w-3.5 h-3.5 text-[#D4A373]" />
+                  {post.location} ({post.distanceKm}km)
+                </span>
+
+                <span className="text-[#5A5A40] font-bold group-hover:underline flex items-center gap-0.5">
+                  상세보기 및 신청 →
+                </span>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
